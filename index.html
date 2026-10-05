@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ห้องพากเสียง – พิมพ์บท แล้วให้เสียงอ่านให้</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#EEF2EF;--surface:#FBFCFB;--ink:#1B2A2F;--muted:#5C6B70;--line:#D3DBD7;--teal:#0E7C7B;--teal-ink:#fff;--rec:#D93B43;--soft:#E1EAE6;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11191B;--surface:#192326;--ink:#E4EEEB;--muted:#93A5A6;--line:#2B3A3D;--teal:#45C4C0;--teal-ink:#08201F;--rec:#FF6B72;--soft:#223034}}
+:root[data-theme="dark"]{--bg:#11191B;--surface:#192326;--ink:#E4EEEB;--muted:#93A5A6;--line:#2B3A3D;--teal:#45C4C0;--teal-ink:#08201F;--rec:#FF6B72;--soft:#223034}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.7 "Prompt","Noto Sans Thai","Sarabun",system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:28px 18px 56px}
+h1{font-size:clamp(26px,5vw,36px);line-height:1.25;margin:0 0 6px;font-weight:600;letter-spacing:-.01em}
+.sub{margin:0 0 22px;color:var(--muted)}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 10px}
+textarea{width:100%;min-height:210px;resize:vertical;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:18px;line-height:1.8}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px dashed var(--line);padding-top:8px;color:var(--muted);font-size:14px}
+.bar .sp{flex:1}
+.link{background:none;border:0;color:var(--teal);font:inherit;font-size:14px;cursor:pointer;padding:4px 2px;text-decoration:underline;text-underline-offset:3px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+@media (max-width:560px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
+select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:15px}
+.sl{display:flex;align-items:center;gap:10px}
+.sl input{flex:1;accent-color:var(--teal);min-width:0}
+.sl output{width:44px;text-align:right;font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button.b{font:inherit;font-weight:500;font-size:16px;border-radius:999px;padding:12px 22px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button.b.main{background:var(--teal);color:var(--teal-ink);border-color:var(--teal);padding:12px 28px}
+button.b.rec{border-color:var(--rec);color:var(--rec)}
+button.b:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.meter{display:flex;align-items:flex-end;gap:3px;height:28px;margin-left:auto}
+.meter i{display:block;width:4px;height:6px;border-radius:2px;background:var(--line)}
+.meter.on i{background:var(--teal);animation:bar .9s ease-in-out infinite}
+.meter.on i:nth-child(2){animation-delay:.15s}.meter.on i:nth-child(3){animation-delay:.3s}.meter.on i:nth-child(4){animation-delay:.45s}.meter.on i:nth-child(5){animation-delay:.6s}
+@keyframes bar{0%,100%{height:6px}50%{height:26px}}
+@media (prefers-reduced-motion:reduce){.meter.on i{animation:none;height:16px}}
+#status{min-height:1.7em;margin:14px 0 0;color:var(--muted);font-size:15px}
+#status.err{color:var(--rec)}
+.result{margin-top:16px;background:var(--soft);border-radius:12px;padding:14px;display:none}
+.result.show{display:block}
+.result audio{width:100%;margin-bottom:10px}
+details{margin-top:22px;border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:15px}
+summary{cursor:pointer;color:var(--ink);font-weight:500}
+ol{padding-left:22px;margin:10px 0 0}
+</style>
+</head>
+<body>
+<main>
+<h1>ห้องพากเสียง</h1>
+<p class="sub">พิมพ์บทพูดลงไป เลือกเสียง แล้วกดพากได้ทันที</p>
+
+<div class="sheet">
+<textarea id="text" placeholder="พิมพ์หรือวางบทพูดที่นี่…" aria-label="บทพูด"></textarea>
+<div class="bar"><span id="count">0 ตัวอักษร</span><span class="sp"></span><button class="link" id="sample" type="button">ใส่ข้อความตัวอย่าง</button><button class="link" id="clear" type="button">ล้าง</button></div>
+</div>
+
+<div class="grid">
+<div><label for="lang">ภาษา</label><select id="lang"></select></div>
+<div><label for="voice">เสียง</label><select id="voice"></select></div>
+<div><label for="rate">ความเร็ว</label><div class="sl"><input id="rate" type="range" min="0.5" max="2" step="0.1" value="1"><output id="rateo">1.0×</output></div></div>
+<div><label for="pitch">ระดับเสียง</label><div class="sl"><input id="pitch" type="range" min="0" max="2" step="0.1" value="1"><output id="pitcho">1.0</output></div></div>
+</div>
+
+<div class="actions">
+<button class="b main" id="play" type="button">พากเสียง</button>
+<button class="b" id="pause" type="button" disabled>หยุดชั่วคราว</button>
+<button class="b" id="stop" type="button" disabled>หยุด</button>
+<button class="b rec" id="rec" type="button">บันทึกเป็นไฟล์เสียง</button>
+<div class="meter" id="meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+</div>
+<p id="status" role="status"></p>
+
+<div class="result" id="result">
+<audio id="player" controls></audio>
+<button class="b main" id="save" type="button">ดาวน์โหลดไฟล์เสียง</button>
+</div>
+
+<details>
+<summary>วิธีบันทึกเป็นไฟล์เสียง</summary>
+<ol>
+<li>กดปุ่ม “บันทึกเป็นไฟล์เสียง”</li>
+<li>เบราว์เซอร์จะถามว่าจะแชร์อะไร ให้เลือกแท็บนี้</li>
+<li>ติ๊ก “แชร์เสียงแท็บ” (Share tab audio) แล้วกดแชร์</li>
+<li>รอจนเสียงอ่านจบ ระบบจะหยุดอัดเอง แล้วกดดาวน์โหลดได้เลย</li>
+</ol>
+<p>ใช้ได้บน Chrome / Edge บนคอมพิวเตอร์ และอย่าปิดเสียงแท็บระหว่างอัด ไฟล์ที่ได้เป็นนามสกุล .webm</p>
+</details>
+</main>
+
+<script>
+(function(){
+var $=function(i){return document.getElementById(i)};
+var synth=window.speechSynthesis, voices=[], queue=[], idx=0, speaking=false, paused=false, token=0;
+var LANGS=[["th","ไทย"],["en","อังกฤษ"],["ja","ญี่ปุ่น"],["zh","จีน"],["ko","เกาหลี"],["","ทั้งหมด"]];
+var text=$("text"), status=$("status"), lastBlob=null;
+
+function say(m,err){status.textContent=m||"";status.className=err?"err":""}
+function fillLang(){$("lang").innerHTML=LANGS.map(function(l){return '<option value="'+l[0]+'">'+l[1]+'</option>'}).join("")}
+function fillVoices(){
+  if(!synth)return;
+  voices=synth.getVoices();
+  var l=$("lang").value;
+  var list=voices.filter(function(v){return !l||v.lang.toLowerCase().indexOf(l)===0});
+  if(!list.length&&l){say("เครื่องนี้ยังไม่มีเสียงสำหรับภาษานี้ แสดงเสียงทั้งหมดแทน");list=voices}
+  $("voice").innerHTML=list.map(function(v){return '<option value="'+voices.indexOf(v)+'">'+v.name+' ('+v.lang+')</option>'}).join("");
+}
+function chunk(t){
+  var out=[];
+  t.split(/\n+/).forEach(function(line){
+    (line.match(/[^.!?。！？]+[.!?。！？]*/g)||[]).forEach(function(s){
+      s=s.trim(); if(!s)return;
+      while(s.length>160){
+        var cut=s.lastIndexOf(" ",160); if(cut<40)cut=160;
+        out.push(s.slice(0,cut).trim()); s=s.slice(cut).trim();
+      }
+      if(s)out.push(s);
+    });
+  });
+  return out;
+}
+function ui(){
+  $("meter").className="meter"+(speaking&&!paused?" on":"");
+  $("pause").disabled=!speaking; $("stop").disabled=!speaking;
+  $("pause").textContent=paused?"เล่นต่อ":"หยุดชั่วคราว";
+  $("play").disabled=speaking;
+}
+function next(my,done){
+  if(my!==token)return;
+  if(idx>=queue.length){speaking=false;paused=false;ui();say("อ่านจบแล้ว");if(done)done();return}
+  var u=new SpeechSynthesisUtterance(queue[idx++]);
+  var v=voices[+$("voice").value]; if(v){u.voice=v;u.lang=v.lang}else u.lang="th-TH";
+  u.rate=+$("rate").value; u.pitch=+$("pitch").value;
+  u.onend=function(){next(my,done)};
+  u.onerror=function(e){if(my!==token)return;if(e.error==="canceled"||e.error==="interrupted")return;speaking=false;ui();say("เล่นเสียงไม่สำเร็จ ลองเลือกเสียงอื่น",true)};
+  synth.speak(u);
+}
+function start(done){
+  if(!synth){say("เบราว์เซอร์นี้ไม่รองรับการอ่านออกเสียง",true);return false}
+  var t=text.value.trim();
+  if(!t){say("พิมพ์บทพูดก่อนนะ",true);text.focus();return false}
+  synth.cancel(); token++;
+  queue=chunk(t); idx=0; speaking=true; paused=false; ui(); say("กำลังพากเสียง…");
+  next(token,done); return true;
+}
+function stopAll(){token++;if(synth)synth.cancel();speaking=false;paused=false;ui();say("หยุดแล้ว")}
+
+$("play").onclick=function(){start()};
+$("pause").onclick=function(){if(!speaking)return;if(paused){synth.resume();paused=false}else{synth.pause();paused=true}ui()};
+$("stop").onclick=stopAll;
+$("lang").onchange=fillVoices;
+$("rate").oninput=function(){$("rateo").textContent=(+this.value).toFixed(1)+"×"};
+$("pitch").oninput=function(){$("pitcho").textContent=(+this.value).toFixed(1)};
+text.oninput=function(){$("count").textContent=text.value.length.toLocaleString("th-TH")+" ตัวอักษร"};
+$("clear").onclick=function(){text.value="";text.oninput();text.focus()};
+$("sample").onclick=function(){text.value="สวัสดีครับ ยินดีต้อนรับสู่คลิปวันนี้\nวันนี้เราจะมาเรียนรู้เรื่องที่น่าสนใจไปด้วยกัน ขอให้สนุกกับการดูนะครับ";text.oninput()};
+
+$("rec").onclick=async function(){
+  if(!text.value.trim()){say("พิมพ์บทพูดก่อนนะ",true);text.focus();return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia||!window.MediaRecorder){say("เบราว์เซอร์นี้อัดเสียงแท็บไม่ได้ ลองใช้ Chrome หรือ Edge บนคอมพิวเตอร์",true);return}
+  var stream;
+  try{stream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true,preferCurrentTab:true,selfBrowserSurface:"include",systemAudio:"include"})}
+  catch(e){say("ยังไม่ได้อนุญาตการแชร์แท็บ กดใหม่แล้วเลือกแท็บนี้",true);return}
+  var tracks=stream.getAudioTracks();
+  if(!tracks.length){stream.getTracks().forEach(function(t){t.stop()});say("ต้องติ๊ก “แชร์เสียงแท็บ” ด้วย กดใหม่อีกครั้ง",true);return}
+  var chunks=[], rec;
+  try{rec=new MediaRecorder(new MediaStream(tracks))}catch(e){stream.getTracks().forEach(function(t){t.stop()});say("เริ่มอัดเสียงไม่ได้",true);return}
+  rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data)};
+  rec.onstop=function(){
+    stream.getTracks().forEach(function(t){t.stop()});
+    $("rec").disabled=false;
+    if(!chunks.length){say("ไม่ได้เสียงที่อัด ตรวจสอบว่าไม่ได้ปิดเสียงแท็บ",true);return}
+    lastBlob=new Blob(chunks,{type:"audio/webm"});
+    try{$("player").src=URL.createObjectURL(lastBlob)}catch(e){}
+    $("result").className="result show"; say("อัดเสร็จแล้ว กดดาวน์โหลดได้เลย");
+  };
+  $("rec").disabled=true; $("result").className="result";
+  rec.start();
+  say("กำลังอัดเสียง… อย่าปิดเสียงแท็บ");
+  if(!start(function(){setTimeout(function(){if(rec.state!=="inactive")rec.stop()},500)})){rec.stop()}
+};
+$("save").onclick=async function(){
+  if(!lastBlob)return;
+  // บนเว็บของคุณเอง: ดาวน์โหลดตรงด้วยลิงก์ปกติ
+  var dl=null;
+  try{dl=window.claude?await window.claude.use("downloads"):null}catch(e){}
+  if(dl){ // ใช้เฉพาะตอนเปิดในหน้า Claude Artifact
+    try{await dl.save({filename:"voiceover.webm",data:lastBlob});say("บันทึกไฟล์แล้ว")}
+    catch(e){say("ดาวน์โหลดไม่สำเร็จ ลองอีกครั้ง",true)}
+    return;
+  }
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(lastBlob); a.download="voiceover.webm";
+  document.body.appendChild(a); a.click(); a.remove();
+  say("บันทึกไฟล์แล้ว");
+};
+
+fillLang();
+if(synth){fillVoices();synth.onvoiceschanged=function(){
+  var hasTh=synth.getVoices().some(function(v){return v.lang.toLowerCase().indexOf("th")===0});
+  if(!hasTh&&$("lang").value==="th")$("lang").value="";
+  fillVoices();
+}}else say("เบราว์เซอร์นี้ไม่รองรับการอ่านออกเสียง",true);
+ui();
+})();
+</script>
+</body>
+</html>
